@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<a href="/movies" style="display:inline-block; margin-bottom: 20px;">&larr; Back to Movies</a>
+
+<div class="card">
+    <h1>{{ movie.title }}</h1>
+    <p><strong>Duration:</strong> {{ movie.duration }} min</p>
+    <p><strong>Genre:</strong> {{ movie.genre }}</p>
+    <p><strong>Rating:</strong> {{ movie.rating }}</p>
+    <p>{{ movie.description }}</p>
+</div>
+
+<h3>Screenings</h3>
+
+{% if 'admin' in roles or 'editor' in roles %}
+<div class="card" style="background-color: #f0f4f8;">
+    <h4>Manage Schedule</h4>
+    <form action="/movies/{{ movie.id }}/screenings/add" method="POST" style="display: flex; gap: 10px; align-items: center;">
+        <label>Room:</label>
+        <select name="room_number" required>
+            {% for room in all_rooms %}
+                <option value="{{ room.number }}">Room {{ room.number }} ({{room.rows}}x{{room.cols}})</option>
+            {% endfor %}
+        </select>
+
+        <label>Date:</label>
+        <input type="date" name="date" required>
+
+        <label>Time:</label>
+        <input type="time" name="time" required>
+
+        <button type="submit" class="btn btn-success">Add Screening</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="row">
+    {% for s in screenings %}
+    <div class="card" style="min-width: 200px; text-align: center;">
+        <h4 style="margin: 0 0 10px 0;">{{ s.date }}</h4>
+        <h2 style="margin: 0 0 10px 0; color: #3498db;">{{ s.time }}</h2>
+        <p>Room: <strong>{{ s.room_number }}</strong></p>
+
+        <a href="/movies/{{ movie.id }}/screenings/{{ s.id }}/seats" class="btn btn-primary" style="width: 100%; box-sizing: border-box; display: block; margin-top: 10px;">
+            Book Seats
+        </a>
+
+        {% if 'admin' in roles or 'editor' in roles %}
+        <form action="/movies/{{ movie.id }}/screenings/{{ s.id }}/delete" method="POST" style="margin-top: 10px;" onsubmit="return confirm('Remove this screening?')">
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Cancel</button>
+        </form>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No screenings scheduled yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

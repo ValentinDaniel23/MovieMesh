@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="text-align: center; padding: 40px 0;">
+    <h1>Welcome to MovieMesh</h1>
+    <p style="color: #666; max-width: 600px; margin: 0 auto 30px auto;">
+        Experience movies like never before. Check out the latest screenings, book your favorite seats, and enjoy the show!
+    </p>
+
+    <div class="row" style="justify-content: center; gap: 20px;">
+        <a href="/movies" class="btn btn-primary" style="padding: 15px 30px; font-size: 1.2rem;">Browse Movies</a>
+        <a href="/rooms" class="btn btn-success" style="padding: 15px 30px; font-size: 1.2rem;">View Halls</a>
+    </div>
+
+    {% if not user %}
+        <div style="margin-top: 40px;">
+            <p>Please <a href="{{ auth_service_url }}/auth/signin">Login</a> to enjoy full features.</p>
+        </div>
+    {% else %}
+        <div style="margin-top: 40px;">
+            <h3>Welcome back, {{ user.given_name }}!</h3>
+            <p>Your roles: {{ roles | join(', ') }}</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

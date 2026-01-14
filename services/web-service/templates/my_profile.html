@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>My Profile</h2>
+
+<div class="card">
+    <h3>User Info</h3>
+    <p><strong>Username:</strong> {{ user.preferred_username }}</p>
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Roles:</strong> {{ roles | join(', ') }}</p>
+</div>
+
+<div class="card">
+    <h3>My Reservations</h3>
+    {% if reservations %}
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Movie</th>
+                <th>Seat</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in reservations %}
+            <tr>
+                <td>{{ r.screening_datetime }}</td>
+                <td>{{ r.movie_title }}</td>
+                <td>Row: {{ r.seat.row + 1 }}, Col: {{ r.seat.col + 1 }}</td>
+                <td>
+                    {% if r.status == 'PAID' %}
+                        <span style="color: green; font-weight: bold;">PAID</span>
+                    {% elif r.status == 'PENDING' %}
+                        <span style="color: orange; font-weight: bold;">PENDING</span>
+                    {% else %}
+                        <span style="color: red; font-weight: bold;">{{ r.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.status == 'PAID' or r.status == 'paid' %}
+                        <a href="{{ ticket_service_url }}/tickets/ticket_{{ r.id }}.pdf" target="_blank" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">Download Ticket</a>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No reservations found.</p>
+    {% endif %}
+</div>
+{% endblock %}

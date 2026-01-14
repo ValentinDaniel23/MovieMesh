@@ -1,0 +1,257 @@
+version: "3.9"
+
+services:
+  postgres-keycloak:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    networks:
+      - keycloak-db-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    command: start-dev --import-realm --hostname-strict=false --http-enabled=true
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak-config:/opt/keycloak/data/import
+    ports:
+      - target: 8080
+        published: 8180
+        protocol: tcp
+        mode: host
+    networks:
+      - cinema-net
+      - keycloak-db-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      placement:
+        constraints:
+          - node.role == manager
+
+  redis:
+    image: redis:alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - movies-cache-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - target: 15672
+        published: 15672
+        mode: host
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - message-broker-net
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    networks:
+      - payment-stripe-net
+    deploy:
+      replicas: 1
+
+  payment-service:
+    image: cinemaapp/payment-service:latest
+    build: ./services/payment-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MQ_QUEUE_REQUESTS: payment_requests
+      MQ_EXCHANGE_EVENTS: payment_events
+      STRIPE_API_KEY: sk_test_123
+      STRIPE_API_BASE: http://stripe-mock:12111
+    networks:
+      - message-broker-net
+      - payment-stripe-net
+    deploy:
+      replicas: 2
+
+  ticket-service:
+    image: cinemaapp/ticket-service:latest
+    build: ./services/ticket-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      MQ_EXCHANGE_EVENTS: payment_events
+    volumes:
+      - tickets_data:/app/tickets
+    networks:
+      - message-broker-net
+    ports:
+      - target: 5003
+        published: 5003
+        mode: ingress
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  postgres-movies:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: movies
+      POSTGRES_USER: movies
+      POSTGRES_PASSWORD: movies
+    volumes:
+      - movies_data:/var/lib/postgresql/data
+    networks:
+      - movies-db-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+  auth-service:
+    image: cinemaapp/auth-service:latest
+    build: ./services/auth-service
+    environment:
+      KEYCLOAK_URL_INTERNAL: http://keycloak:8080
+      KEYCLOAK_URL_EXTERNAL: http://localhost:8180
+      KEYCLOAK_REALM: cinema-realm
+      KEYCLOAK_CLIENT_ID: cinema-client
+      KEYCLOAK_CLIENT_SECRET: gadh2vf!fh5_Asdg34
+      AUTH_BASE_URL: http://localhost:5001
+      REDIRECT_URI: http://localhost:5001/auth/callback
+      POST_LOGIN_REDIRECT_URI: http://localhost:8081/
+      POST_LOGOUT_REDIRECT_URI: http://localhost:8081/
+      PORT: 5000
+    ports:
+      - target: 5000
+        published: 5001
+        protocol: tcp
+        mode: host
+    networks:
+      - cinema-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+
+  movies-service:
+    image: cinemaapp/movies-service:latest
+    build: ./services/movies-service
+    environment:
+      KEYCLOAK_URL_INTERNAL: http://keycloak:8080
+      KEYCLOAK_REALM: cinema-realm
+      KEYCLOAK_CLIENT_ID: cinema-client
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      MQ_QUEUE_REQUESTS: payment_requests
+      MQ_EXCHANGE_EVENTS: payment_events
+      DATABASE_URL: postgresql://movies:movies@postgres-movies:5432/movies
+      PORT: 5000
+    ports:
+      - target: 5000
+        published: 5002
+        protocol: tcp
+        mode: ingress
+    networks:
+      - cinema-net
+      - movies-db-net
+      - movies-cache-net
+      - message-broker-net
+    deploy:
+      mode: replicated
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+
+  web-service:
+    image: cinemaapp/web-service:latest
+    build: ./services/web-service
+    environment:
+      EXTERNAL_PUBLIC_AUTH_URL: http://localhost:5001
+      EXTERNAL_PUBLIC_TICKET_URL: http://localhost:5003
+      MOVIES_SERVICE_URL: http://movies-service:5000
+      KEYCLOAK_URL_INTERNAL: http://keycloak:8080
+      KEYCLOAK_REALM: cinema-realm
+      KEYCLOAK_CLIENT_ID: cinema-client
+      FLASK_SECRET_KEY: gas!#vrg35g45
+      PORT: 5000
+    ports:
+      - target: 5000
+        published: 8081
+        protocol: tcp
+        mode: ingress
+    networks:
+      - cinema-net
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+
+networks:
+  cinema-net:
+    driver: overlay
+    attachable: true
+  message-broker-net:
+    driver: overlay
+    attachable: false
+  payment-stripe-net:
+    driver: overlay
+    attachable: false
+  keycloak-db-net:
+    driver: overlay
+    attachable: false
+  movies-db-net:
+    driver: overlay
+    attachable: false
+  movies-cache-net:
+    driver: overlay
+    attachable: false
+
+volumes:
+  keycloak_data:
+  movies_data:
+  tickets_data:
+  redis_data:
+  rabbitmq_data:

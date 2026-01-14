@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Movies</h2>
+    {% if 'admin' in roles or 'editor' in roles %}
+    <form action="/movies/add" method="POST" style="background: #eee; padding: 10px; border-radius: 8px; display: flex; gap: 10px; align-items: center;">
+        <strong>New Movie:</strong>
+        <input type="text" name="title" placeholder="Title" required>
+        <input type="number" name="duration" placeholder="Mins" required style="width: 70px;">
+        <input type="text" name="description" placeholder="Description">
+        <button type="submit" class="btn btn-success">Add</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="row">
+    {% for movie in movies %}
+    <div class="card" style="flex: 0 0 300px; display: flex; flex-direction: column;">
+        <h3>{{ movie.title }}</h3>
+        <p class="muted">{{ movie.duration }} min</p>
+        <p>{{ movie.description }}</p>
+        <div style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between;">
+            <a href="/movies/{{ movie.id }}" class="btn btn-primary">Details & Schedule</a>
+
+            {% if 'admin' in roles or 'editor' in roles %}
+            <form action="/movies/{{ movie.id }}/delete" method="POST" onsubmit="return confirm('Are you sure?');">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p>No movies available yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

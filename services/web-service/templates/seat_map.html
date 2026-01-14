@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<a href="/movies/{{ data.screening.movie_id }}" style="display:inline-block; margin-bottom: 20px;">&larr; Back to Movie</a>
+
+<div class="card" style="text-align: center;">
+    <h2>Seat Selection</h2>
+    <p>Room: {{ data.room }} | {{ data.screening.date }} at {{ data.screening.time }}</p>
+
+    <div style="background: #333; color: white; padding: 10px; margin: 20px auto; max-width: 400px; border-radius: 0 0 50px 50px;">
+        SCREEN
+    </div>
+
+    <!-- Seat Matrix -->
+    <div style="display: inline-block; background: #eee; padding: 20px; border-radius: 10px;">
+        {% for row in data.layout %}
+            {% set row_index = loop.index0 %}
+            <div class="grid-seat">
+                {% for status in row %}
+                    <!-- status: 0 = Free, 1 = Taken -->
+                    {% if status == 0 %}
+                    <div class="seat free" 
+                         data-row="{{ row_index }}" 
+                         data-col="{{ loop.index0 }}" 
+                         onclick="selectSeat(this)">
+                        {{ row_index + 1 }}-{{ loop.index0 + 1 }}
+                    </div>
+                    {% else %}
+                    <div class="seat taken" title="Occupied">
+                        X
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div style="margin-top: 20px;">
+        <span style="display:inline-block; width: 20px; height: 20px; background: #2ecc71; vertical-align: middle; margin-right: 5px;"></span> Free
+        <span style="display:inline-block; width: 20px; height: 20px; background: #e74c3c; vertical-align: middle; margin-left: 15px; margin-right: 5px;"></span> Taken
+        <span style="display:inline-block; width: 20px; height: 20px; background: #f1c40f; vertical-align: middle; margin-left: 15px; margin-right: 5px;"></span> Selected
+    </div>
+
+    <div style="margin-top: 30px;">
+        <p id="selection-msg">No seats selected</p>
+        {% if user %}
+            <button id="book-btn" class="btn btn-primary" disabled onclick="bookSeat()">Book & Pay</button>
+        {% else %}
+            <div style="background-color: #ffeeba; padding: 15px; border-radius: 5px; color: #856404;">
+                <p style="margin: 0;">You must be logged in to book tickets.</p>
+                <a href="{{ auth_service_url }}/auth/signin?next=/movies/{{ mid }}/screenings/{{ sid }}/seats" class="btn btn-primary" style="margin-top: 10px;">Login Here</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    let selectedSeat = null;
+
+    function selectSeat(el) {
+        if (el.classList.contains('taken')) return;
+
+        // Read from data attributes
+        const row = parseInt(el.getAttribute('data-row'));
+        const col = parseInt(el.getAttribute('data-col'));
+
+        // Deselect others (single seat mode)
+        document.querySelectorAll('.seat.free').forEach(s => s.style.backgroundColor = '');
+
+        if (selectedSeat && selectedSeat.row === row && selectedSeat.col === col) {
+            // Deselect
+            selectedSeat = null;
+            document.getElementById('book-btn').disabled = true;
+            document.getElementById('selection-msg').innerText = "No seats selected";
+        } else {
+            // Select
+            el.style.backgroundColor = '#f1c40f';
+            selectedSeat = { row: row, col: col };
+            document.getElementById('book-btn').disabled = false;
+            document.getElementById('selection-msg').innerText = `Selected Seat: R${row+1} - C${col+1}`;
+        }
+    }
+
+    async function bookSeat() {
+        if (!selectedSeat) return;
+
+        const payload = {
+            movie_id: "{{ mid }}",
+            screening_id: "{{ sid }}",
+            room_number: "{{ data.room_number }}",
+            seat_row: selectedSeat.row,
+            seat_col: selectedSeat.col
+        };
+
+        try {
+            const resp = await fetch("/reservations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await resp.json();
+            if (resp.ok) {
+                alert("Reservation created! Processing payment...");
+                window.location.href = "/myprofile";
+            } else {
+                alert("Error: " + result.error);
+            }
+        } catch (e) {
+            alert("Network error");
+        }
+    }
+</script>
+{% endblock %}
