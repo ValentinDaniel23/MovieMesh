@@ -3,7 +3,6 @@ import json
 import pika
 import time
 import threading
-from models import db, Reservation
 from flask import Flask
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")

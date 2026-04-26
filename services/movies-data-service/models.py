@@ -13,7 +13,7 @@ class Movie(db.Model):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
-    duration: Mapped[int] = mapped_column(Integer, nullable=False) # Minutes
+    duration: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -62,7 +62,7 @@ class Reservation(db.Model):
     __tablename__ = 'reservations'
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String(255), nullable=False) # Keycloak Subject ID
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     movie_id: Mapped[str] = mapped_column(String(36), nullable=False)
     room_number: Mapped[str] = mapped_column(String(50), nullable=False)
     screening_id: Mapped[str] = mapped_column(String(36), nullable=False)
@@ -78,7 +78,6 @@ class Reservation(db.Model):
         Index(
             'ix_unique_seat_reservation',
             'screening_id', 'seat_row', 'seat_column',
-            unique=True,
             postgresql_where=text("status IN ('paid', 'pending', 'PAID', 'PENDING')")
         ),
     )

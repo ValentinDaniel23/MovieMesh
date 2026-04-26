@@ -177,12 +177,10 @@ services:
       KEYCLOAK_URL_INTERNAL: http://keycloak:8080
       KEYCLOAK_REALM: cinema-realm
       KEYCLOAK_CLIENT_ID: cinema-client
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
       RABBITMQ_HOST: rabbitmq
       MQ_QUEUE_REQUESTS: payment_requests
       MQ_EXCHANGE_EVENTS: payment_events
-      DATABASE_URL: postgresql://movies:movies@postgres-movies:5432/movies
+      MOVIES_DATA_SERVICE_URL: http://movies-data-service:5000
       PORT: 5000
     ports:
       - target: 5000
@@ -191,12 +189,33 @@ services:
         mode: ingress
     networks:
       - cinema-net
-      - movies-db-net
-      - movies-cache-net
+      - movies-api-net
       - message-broker-net
     deploy:
       mode: replicated
       replicas: 3
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+
+  movies-data-service:
+    image: cinemaapp/movies-data-service:latest
+    build: ./services/movies-data-service
+    environment:
+      KEYCLOAK_URL_INTERNAL: http://keycloak:8080
+      KEYCLOAK_REALM: cinema-realm
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATABASE_URL: postgresql://movies:movies@postgres-movies:5432/movies
+      PORT: 5000
+    networks:
+      - movies-api-net
+      - movies-db-net
+      - movies-cache-net
+    deploy:
+      mode: replicated
+      replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
@@ -246,6 +265,9 @@ networks:
     driver: overlay
     attachable: false
   movies-cache-net:
+    driver: overlay
+    attachable: false
+  movies-api-net:
     driver: overlay
     attachable: false
 
