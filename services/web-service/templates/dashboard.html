@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cinema - Dashboard</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 40px; }
+      .card { max-width: 800px; border: 1px solid #ddd; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+      .role-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; background: #eee; font-size: 0.9em; margin-right: 5px; }
+      .admin { background: #ffebee; color: #c62828; }
+      .editor { background: #e3f2fd; color: #1565c0; }
+      .viewer { background: #e8f5e9; color: #2e7d32; }
+      img.db-logo { max-width: 100px; margin-top: 20px; }
+      a.button { display: inline-block; padding: 10px 14px; border: 1px solid #444; border-radius: 8px; text-decoration: none; color: #111; margin-top: 10px;}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Dashboard</h1>
+
+      {% if not user %}
+        <div class="status">
+            <h2>You are not logged in</h2>
+            <p>Please log in to view your dashboard.</p>
+            <a class="button" href="{{ auth_service_url }}/auth/signin">Login</a>
+        </div>
+      {% else %}
+
+        <div class="profile-section">
+            {% if 'admin' in roles %}
+                <h2 class="admin">You are Admin</h2>
+            {% elif 'editor' in roles %}
+                <h2 class="editor">You are Editor</h2>
+            {% elif 'viewer' in roles %}
+                <h2 class="viewer">You are Viewer</h2>
+            {% else %}
+                <h2>User (No specific role)</h2>
+            {% endif %}
+
+            <h3>Profile Details</h3>
+            <ul>
+                <li><strong>Username:</strong> {{ user.get('preferred_username') }}</li>
+                <li><strong>Email:</strong> {{ user.get('email') }}</li>
+                <li><strong>Name:</strong> {{ user.get('given_name') }} {{ user.get('family_name') }}</li>
+                <li><strong>Roles:</strong> 
+                    {% for role in roles %}
+                        <span class="role-badge {{ role }}">{{ role }}</span>
+                    {% endfor %}
+                </li>
+            </ul>
+        </div>
+
+      {% endif %}
+
+      <div style="margin-top: 20px;">
+        <a href="/">Back to Home</a>
+      </div>
+    </div>
+  </body>
+</html>

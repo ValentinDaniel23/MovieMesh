@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2>Cinema Halls</h2>
+    {% if 'admin' in roles or 'editor' in roles %}
+    <form action="/rooms/add" method="POST" style="background: #eee; padding: 10px; border-radius: 8px; display: flex; gap: 10px; align-items: center;">
+        <strong>New Room:</strong>
+        <input type="text" name="number" placeholder="Room Number/Name" required>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <input type="number" name="rows" placeholder="Rows" required style="width: 60px;">
+            <span>x</span>
+            <input type="number" name="cols" placeholder="Cols" required style="width: 60px;">
+        </div>
+        <button type="submit" class="btn btn-success">Create</button>
+    </form>
+    {% endif %}
+</div>
+
+<table class="card">
+    <thead>
+        <tr>
+            <th>Room Number</th>
+            <th>Dimensions (Rows x Cols)</th>
+            <th>Capacity</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for room in rooms %}
+        <tr>
+            <td><strong>{{ room.number }}</strong></td>
+            <td>{{ room.rows }} x {{ room.cols }}</td>
+            <td>{{ room.rows * room.cols }} seats</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No rooms defined yet.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

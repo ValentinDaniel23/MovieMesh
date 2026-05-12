@@ -1,0 +1,97 @@
+{
+    "realm": "cinema-realm",
+    "enabled": true,
+    "defaultRoles": ["viewer"],
+    "sslRequired": "external",
+    "registrationAllowed": true,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "editUsernameAllowed": true,
+    "bruteForceProtected": true,
+    "clients": [
+        {
+            "clientId": "cinema-client",
+            "enabled": true,
+            "secret": "gadh2vf!fh5_Asdg34",
+            "attributes": {
+                "post.logout.redirect.uris": "http://localhost:8081/*"
+            },
+            "redirectUris": [
+                "http://localhost:5001/auth/callback",
+                "http://localhost:5001/auth/callback/*"
+            ],
+            "webOrigins": [
+                "http://localhost:8081"
+            ],
+            "protocol": "openid-connect",
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "publicClient": false
+        }
+    ],
+    "users": [
+        {
+            "username": "admin-user",
+            "enabled": true,
+            "email": "admin@cinema.local",
+            "firstName": "Admin",
+            "lastName": "User",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "admin123",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["admin"]
+        },
+        {
+            "username": "editor-user",
+            "enabled": true,
+            "email": "editor@cinema.local",
+            "firstName": "Editor",
+            "lastName": "User",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "editor123",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["editor"]
+        },
+        {
+            "username": "viewer-user",
+            "enabled": true,
+            "email": "viewer@cinema.local",
+            "firstName": "Viewer",
+            "lastName": "User",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "viewer123",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": ["viewer"]
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "admin",
+                "description": "Administrator role"
+            },
+            {
+                "name": "editor",
+                "description": "Editor role"
+            },
+            {
+                "name": "viewer",
+                "description": "Viewer role"
+            }
+        ]
+    }
+}
