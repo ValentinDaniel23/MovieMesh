@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/cicd-pipeline
 
 jobs:
   build-and-push:
