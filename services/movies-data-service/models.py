@@ -78,7 +78,7 @@ class Reservation(db.Model):
         Index(
             'ix_unique_seat_reservation',
             'screening_id', 'seat_row', 'seat_column',
-            postgresql_where=text("status IN ('paid', 'pending', 'PAID', 'PENDING')")
+            postgresql_where=text("status IN ('PENDING', 'PAID')")
         ),
     )
 

@@ -3,7 +3,7 @@ import json
 import pika
 import time
 import threading
-from flask import Flask
+from utils import call_data_service
 
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 MQ_QUEUE_REQUESTS = os.getenv("MQ_QUEUE_REQUESTS", "payment_requests")
@@ -29,7 +29,7 @@ def publish_payment_request(payload):
     except Exception as e:
         print(f" [MQ] Publish error: {e}")
 
-def start_payment_result_listener(app: Flask):
+def start_payment_result_listener():
     def listener():
         print(f" [MQ] Listener connecting to {RABBITMQ_HOST}...")
         while True:
@@ -49,15 +49,18 @@ def start_payment_result_listener(app: Flask):
 
                     print(f" [MQ] Update received: {res_id} -> {status}")
 
-                    with app.app_context():
-                        reservation = db.session.get(Reservation, res_id)
-                        if reservation:
-                            reservation.status = status
-                            db.session.commit()
-                        else:
-                            print(f" [DB] Reservation {res_id} missing")
-
-                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    try:
+                        update_resp = call_data_service(
+                            "PUT",
+                            f"/reservations/{res_id}",
+                            json={"status": status}
+                        )
+                        if not update_resp.get("ok"):
+                            print(f" [MQ] Failed to update reservation {res_id}: {update_resp.get('error')}")
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+                    except Exception as e:
+                        print(f" [MQ] Error updating reservation {res_id}: {e}")
+                        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(queue=queue_name, on_message_callback=callback)

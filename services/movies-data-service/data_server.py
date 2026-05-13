@@ -29,6 +29,10 @@ if not DATABASE_URL:
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+}
 
 init_db(app)
 
@@ -201,11 +205,55 @@ def create_screening_endpoint(movie_id):
     except Exception as e:
         return response(False, error=str(e), status=500)
 
+@app.route("/screenings/<screening_id>", methods=["GET"])
+def get_screening(screening_id):
+    try:
+        screening = get_screening_by_id(screening_id)
+        if not screening:
+            return response(False, error="Screening not found", status=404)
+        return response(True, screening.to_dict())
+    except Exception as e:
+        return response(False, error=str(e), status=500)
+
+@app.route("/movies/<movie_id>/screenings/<screening_id>", methods=["DELETE"])
+def delete_screening_endpoint(movie_id, screening_id):
+    try:
+        screening = get_screening_by_id(screening_id)
+        if not screening:
+            return response(False, error="Screening not found", status=404)
+        if screening.movie_id != movie_id:
+            return response(False, error="Screening does not belong to this movie", status=400)
+
+        delete_screening(screening_id)
+        invalidate_screenings()
+        cache_delete_screening(screening_id)
+        return response(True, {"id": screening_id})
+    except Exception as e:
+        return response(False, error=str(e), status=500)
+
 # Reservations endpoints
 @app.route("/reservations", methods=["GET"])
 def get_reservations():
     try:
         reservations = get_all_reservations()
+        data = [r.to_dict() for r in reservations]
+        return response(True, data)
+    except Exception as e:
+        return response(False, error=str(e), status=500)
+
+@app.route("/reservations/user/<user_id>", methods=["GET"])
+def get_reservations_by_user(user_id):
+    try:
+        reservations = Reservation.query.filter_by(user_id=user_id).order_by(Reservation.created_at.desc()).all()
+        data = [r.to_dict() for r in reservations]
+        return response(True, data)
+    except Exception as e:
+        return response(False, error=str(e), status=500)
+
+@app.route("/reservations/screening/<screening_id>", methods=["GET"])
+def get_reservations_by_screening(screening_id):
+    try:
+        reservations = Reservation.query.filter_by(screening_id=screening_id).all()
         data = [r.to_dict() for r in reservations]
         return response(True, data)
     except Exception as e:

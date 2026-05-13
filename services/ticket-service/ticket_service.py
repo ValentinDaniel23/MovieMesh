@@ -22,6 +22,18 @@ TICKETS_DIR = "/app/tickets"
 if not os.path.exists(TICKETS_DIR):
     os.makedirs(TICKETS_DIR)
 
+def wait_for_rabbitmq():
+    print(f" [Ticket] Waiting for RabbitMQ at {RABBITMQ_HOST}...")
+    for _ in range(120):
+        try:
+            conn = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST, socket_timeout=2))
+            conn.close()
+            print(f" [Ticket] RabbitMQ is ready")
+            return
+        except Exception:
+            time.sleep(2)
+    raise RuntimeError("RabbitMQ not ready after 240 seconds")
+
 def generate_ticket(data):
     if data.get("status") != "PAID":
         return
@@ -80,6 +92,7 @@ def rabbit_listener():
             print(f" [Ticket] Error: {e}, retrying in 5s...")
             time.sleep(5)
 
+wait_for_rabbitmq()
 threading.Thread(target=rabbit_listener, daemon=True).start()
 
 @app.route("/tickets/<filename>")

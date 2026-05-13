@@ -2,7 +2,7 @@
 import os
 from flask import Flask
 from dotenv import load_dotenv
-from utils import wait_for_keycloak, PORT
+from utils import wait_for_keycloak, wait_for_rabbitmq, PORT
 from routes import api
 from mq_utils import start_payment_result_listener
 
@@ -18,8 +18,9 @@ def health():
 
 if __name__ == "__main__":
     wait_for_keycloak()
+    wait_for_rabbitmq()
 
     # Start RabbitMQ Listener
-    start_payment_result_listener(app)
+    start_payment_result_listener()
 
-    app.run(host="0.0.0.0", port=int(PORT), debug=True)
+    app.run(host="0.0.0.0", port=int(PORT), debug=False)

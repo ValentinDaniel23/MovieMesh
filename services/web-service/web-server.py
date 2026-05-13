@@ -227,5 +227,5 @@ def health():
 
 if __name__ == "__main__":
     wait_for_keycloak()
-    app.run(host="0.0.0.0", port=int(PORT), debug=True)
+    app.run(host="0.0.0.0", port=int(PORT), debug=False)
 

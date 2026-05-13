@@ -26,6 +26,18 @@ JWKS_URL = f"{KEYCLOAK_INTERNAL}/realms/{REALM}/protocol/openid-connect/certs"
 _jwks_cache: dict[str, Any] | None = None
 _jwks_cache_expires_at: float = 0.0
 
+def wait_for_rabbitmq():
+    import pika
+    for _ in range(120):
+        try:
+            conn = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST, socket_timeout=2))
+            conn.close()
+            print(f" [MQ] RabbitMQ at {RABBITMQ_HOST} is ready")
+            return
+        except Exception:
+            time.sleep(2)
+    raise RuntimeError("RabbitMQ not ready after 240 seconds")
+
 def wait_for_keycloak():
     url = f"{KEYCLOAK_INTERNAL}/health/ready"
 

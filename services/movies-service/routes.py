@@ -194,14 +194,13 @@ def remove_screening(mid, sid):
 @api.get("/movies/<mid>/screenings/<sid>/seats")
 def view_seats(mid, sid):
     try:
-        screening_resp = call_data_service("GET", f"/movies/{mid}/screenings")
+        screening_resp = call_data_service("GET", f"/screenings/{sid}")
         if not screening_resp.get("ok"):
-            return jsonify({"ok": False, "error": "Movie not found"}), 404
-
-        screenings = screening_resp.get("data", [])
-        screening = next((s for s in screenings if s.get("id") == sid), None)
-        if not screening:
             return jsonify({"ok": False, "error": "Screening not found"}), 404
+
+        screening = screening_resp.get("data", {})
+        if screening.get("movie_id") != mid:
+            return jsonify({"ok": False, "error": "Screening does not belong to this movie"}), 404
 
         room_resp = call_data_service("GET", f"/rooms/{screening['room_number']}")
         if not room_resp.get("ok"):
@@ -211,12 +210,12 @@ def view_seats(mid, sid):
         rows = room.get("rows", 0)
         cols = room.get("cols", 0)
 
-        reservations_resp = call_data_service("GET", "/reservations")
+        reservations_resp = call_data_service("GET", f"/reservations/screening/{sid}")
         reservations = reservations_resp.get("data", []) if reservations_resp.get("ok") else []
 
         taken_seats = set()
         for res in reservations:
-            if res.get("screening_id") == sid and res.get("status") in ['paid', 'pending', 'PAID', 'PENDING']:
+            if res.get("status") in ['PAID', 'PENDING']:
                 seat_info = res.get("seat", {})
                 taken_seats.add((seat_info.get("row"), seat_info.get("col")))
 
@@ -278,7 +277,7 @@ def create_reservation():
         return jsonify({"ok": False, "error": "Missing reservation fields"}), 400
 
     try:
-        screening_resp = call_data_service("GET", f"/reservations/{screening_id}")
+        screening_resp = call_data_service("GET", f"/screenings/{screening_id}")
         if not screening_resp.get("ok"):
             return jsonify({"ok": False, "error": "Screening not found"}), 404
 
@@ -350,20 +349,15 @@ def get_my_reservations():
     real_user_id = user_id.get("sub")
 
     try:
-        resp = call_data_service("GET", "/reservations")
+        resp = call_data_service("GET", f"/reservations/user/{real_user_id}")
         if not resp.get("ok"):
             return jsonify(resp), 500
 
-        all_reservations = resp.get("data", [])
-        user_reservations = [r for r in all_reservations if r.get("user_id") == real_user_id]
-        user_reservations.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-
         results = []
-        for r in user_reservations:
+        for r in resp.get("data", []):
             try:
                 movie_resp = call_data_service("GET", f"/movies/{r.get('movie_id')}")
-                movie_title = movie_resp.get("data", {}).get("title", "Unknown Movie") if movie_resp.get("ok") else "Unknown Movie"
-                r["movie_title"] = movie_title
+                r["movie_title"] = movie_resp.get("data", {}).get("title", "Unknown Movie") if movie_resp.get("ok") else "Unknown Movie"
             except:
                 r["movie_title"] = "Unknown Movie"
             results.append(r)
