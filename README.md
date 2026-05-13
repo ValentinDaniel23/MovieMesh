@@ -13,27 +13,26 @@ graph TD
     Client[User Browser]
 
     subgraph "Docker Swarm Cluster"
-        ingress[Ingress / Docker Routing Mesh]
+        Kong[Kong API Gateway :8000]
 
-        Client -->|HTTP 8081| ingress
-        Client -->|HTTP 5001| ingress
-        Client -->|HTTP 8180| ingress
+        Client -->|HTTP 8000| Kong
 
-        ingress -->|8081| Web[Web Service]
-        ingress -->|5001| Auth[Auth Service]
-        ingress -->|8180| KC[Keycloak]
+        Kong -->|/| Web[Web Service]
+        Kong -->|/auth| Auth[Auth Service]
+        Kong -->|/api| Movies[Movies Service]
+        Kong -->|/tickets| Ticket[Ticket Service]
 
         subgraph "Internal Network (cinema-net)"
-            Web -->|REST| Movies[Movies Service]
-            Web -->|REST| Ticket[Ticket Service]
-            Auth -->|OIDC| KC
+            Web -->|REST| Movies
+            Auth -->|OIDC| KC[Keycloak :8180]
             Movies -->|Verify Token| KC
         end
 
         subgraph "Data Persistence"
             KC -->|JDBC| DB_KC[(Postgres Keycloak)]
-            Movies -->|SQLAlchemy| DB_Mov[(Postgres Movies)]
-            Movies -->|Cache| Redis[(Redis)]
+            Movies -->|REST| MoviesData[Movies Data Service]
+            MoviesData -->|SQLAlchemy| DB_Mov[(Postgres Movies)]
+            MoviesData -->|Cache| Redis[(Redis)]
         end
 
         subgraph "Async Messaging (RabbitMQ)"
@@ -41,7 +40,6 @@ graph TD
             RMQ -.->|Consume Request| Pay[Payment Service]
             Pay -- Call Stripe API --> Stripe[(Stripe Mock)]
             Pay -.->|Publish Result| RMQ
-            RMQ -.->|Consume Result| Movies
             RMQ -.->|Consume Result| Ticket
         end
     end
@@ -51,12 +49,13 @@ graph TD
 
 The stack isolates traffic using multiple overlay networks:
 
-1.  **`cinema-net`**: The primary application network. Connects the Web frontend, Auth service, Movies API, and Keycloak.
-2.  **`message-broker-net`**: Dedicated network for async background tasks. Connects Movies, Payment, Ticket services to RabbitMQ.
-3.  **`keycloak-db-net`**: Isolated network connecting Keycloak to its Postgres database.
-4.  **`movies-db-net`**: Isolated network connecting Movies Service to its Postgres database.
-5.  **`movies-cache-net`**: Dedicated channel for Redis caching validation.
-6.  **`payment-stripe-net`**: Connects the Payment service to the Stripe Mock server.
+1.  **`cinema-net`**: The primary application network. Connects Kong, Web, Auth, Movies, Ticket services and Keycloak.
+2.  **`movies-api-net`**: Internal network between Movies Service and Movies Data Service.
+3.  **`message-broker-net`**: Dedicated network for async background tasks. Connects Movies, Payment, Ticket services to RabbitMQ.
+4.  **`keycloak-db-net`**: Isolated network connecting Keycloak to its Postgres database.
+5.  **`movies-db-net`**: Isolated network connecting Movies Data Service to its Postgres database.
+6.  **`movies-cache-net`**: Dedicated channel for Redis caching.
+7.  **`payment-stripe-net`**: Connects the Payment service to the Stripe Mock server.
 
 ### 💾 Persistence & Volumes
 
@@ -78,14 +77,16 @@ In the Swarm mesh, services address each other by their service name (Internal D
 
 ## 🧩 Microservices Explained
 
-1.  **Web Service** (`Port 8081`): The frontend application (Server-Side Rendered Flask). It serves HTML pages and calls the backend APIs.
-2.  **Auth Service** (`Port 5001`): A helper service that constructs OIDC URLs for login/registration and handles callbacks from Keycloak.
-3.  **Movies Service** (`Port 5002`): The core backend. Manages movies, screenings, and rooms. It handles reservation logic and publishes payment requests to RabbitMQ.
-4.  **Payment Service** (Worker): Listens for payment requests. Simulates credit card processing via Stripe (Mock) and publishes payment success/failure events.
-5.  **Ticket Service** (`Port 5003`): Listens for successful payment events. Generates PDF tickets with QR codes and serves them to the user.
-6.  **Keycloak** (`Port 8180`): The Authorization Server. Handles user management, roles, and issues JWT tokens.
-7.  **RabbitMQ**: Handles asynchronous communication between the Movies, Payment, and Ticket services.
-8.  **Redis**: Caches data for the Movies service to improve performance.
+1.  **Kong API Gateway** (`Port 8000`): Single public entry point. Routes all external traffic to the appropriate internal service.
+2.  **Web Service** (internal): The frontend application (Server-Side Rendered Flask). Served via Kong at `/`.
+3.  **Auth Service** (internal): Constructs OIDC URLs for login/registration and handles callbacks from Keycloak. Served via Kong at `/auth`.
+4.  **Movies Service** (internal): The core backend. Manages movies, screenings, and rooms. Served via Kong at `/api`.
+5.  **Movies Data Service** (internal): Dedicated data access layer. Handles all DB and cache operations for the Movies Service.
+6.  **Payment Service** (Worker): Listens for payment requests. Simulates credit card processing via Stripe (Mock) and publishes payment success/failure events.
+7.  **Ticket Service** (internal): Listens for successful payment events. Generates PDF tickets with QR codes. Served via Kong at `/tickets`.
+8.  **Keycloak** (`Port 8180`): The Authorization Server. Handles user management, roles, and issues JWT tokens.
+9.  **RabbitMQ**: Handles asynchronous communication between the Movies, Payment, and Ticket services.
+10. **Redis**: Caches data for the Movies Data service to improve performance.
 
 ---
 
@@ -131,9 +132,24 @@ docker stack deploy -c docker-stack.yml cinema_stack
 
 Wait for a minute for all containers to start and Keycloak to initialize.
 
-1.  **Main Interface**: [http://localhost:8081](http://localhost:8081)
-2.  **Keycloak Admin**: [http://localhost:8180](http://localhost:8180) (user: `admin`, pass: `admin`)
-3.  **RabbitMQ Manager**: [http://localhost:15672](http://localhost:15672) (user: `guest`, pass: `guest`)
+#### Application (via Kong)
+
+| URL | Description |
+|-----|-------------|
+| [http://localhost:8000](http://localhost:8000) | Main UI (web-service) |
+| [http://localhost:8000/auth/signin](http://localhost:8000/auth/signin) | Login |
+| [http://localhost:8000/api/movies](http://localhost:8000/api/movies) | Movies API |
+| [http://localhost:8000/tickets/\<filename\>](http://localhost:8000/tickets/) | Ticket download |
+
+#### Admin Tools
+
+| URL | Description |
+|-----|-------------|
+| [http://localhost:8001](http://localhost:8001) | Kong Admin API |
+| [http://localhost:8180](http://localhost:8180) | Keycloak Admin (user: `admin`, pass: `admin`) |
+| [http://localhost:15672](http://localhost:15672) | RabbitMQ Manager (user: `guest`, pass: `guest`) |
+| [http://localhost:5050](http://localhost:5050) | pgAdmin (user: `admin@moviemesh.com`, pass: `admin`) |
+| [http://localhost:9000](http://localhost:9000) | Portainer |
 
 ### Stopping the Project
 

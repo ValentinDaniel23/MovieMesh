@@ -112,10 +112,7 @@ services:
       - tickets_data:/app/tickets
     networks:
       - message-broker-net
-    ports:
-      - target: 5003
-        published: 5003
-        mode: ingress
+      - cinema-net
     deploy:
       replicas: 2
       restart_policy:
@@ -150,16 +147,11 @@ services:
       KEYCLOAK_REALM: cinema-realm
       KEYCLOAK_CLIENT_ID: cinema-client
       KEYCLOAK_CLIENT_SECRET: gadh2vf!fh5_Asdg34
-      AUTH_BASE_URL: http://localhost:5001
-      REDIRECT_URI: http://localhost:5001/auth/callback
-      POST_LOGIN_REDIRECT_URI: http://localhost:8081/
-      POST_LOGOUT_REDIRECT_URI: http://localhost:8081/
+      AUTH_BASE_URL: http://localhost:8000
+      REDIRECT_URI: http://localhost:8000/auth/callback
+      POST_LOGIN_REDIRECT_URI: http://localhost:8000/
+      POST_LOGOUT_REDIRECT_URI: http://localhost:8000/
       PORT: 5000
-    ports:
-      - target: 5000
-        published: 5001
-        protocol: tcp
-        mode: host
     networks:
       - cinema-net
     deploy:
@@ -182,11 +174,6 @@ services:
       MQ_EXCHANGE_EVENTS: payment_events
       MOVIES_DATA_SERVICE_URL: http://movies-data-service:5000
       PORT: 5000
-    ports:
-      - target: 5000
-        published: 5002
-        protocol: tcp
-        mode: ingress
     networks:
       - cinema-net
       - movies-api-net
@@ -225,19 +212,14 @@ services:
     image: cinemaapp/web-service:latest
     build: ./services/web-service
     environment:
-      EXTERNAL_PUBLIC_AUTH_URL: http://localhost:5001
-      EXTERNAL_PUBLIC_TICKET_URL: http://localhost:5003
+      EXTERNAL_PUBLIC_AUTH_URL: http://localhost:8000
+      EXTERNAL_PUBLIC_TICKET_URL: http://localhost:8000
       MOVIES_SERVICE_URL: http://movies-service:5000
       KEYCLOAK_URL_INTERNAL: http://keycloak:8080
       KEYCLOAK_REALM: cinema-realm
       KEYCLOAK_CLIENT_ID: cinema-client
       FLASK_SECRET_KEY: gas!#vrg35g45
       PORT: 5000
-    ports:
-      - target: 5000
-        published: 8081
-        protocol: tcp
-        mode: ingress
     networks:
       - cinema-net
     deploy:
@@ -247,6 +229,39 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 5
+
+  kong:
+    image: kong:3.6
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+    ports:
+      - target: 8000
+        published: 8000
+        protocol: tcp
+        mode: host
+      - target: 8001
+        published: 8001
+        protocol: tcp
+        mode: host
+    volumes:
+      - ./kong:/usr/local/kong/declarative
+    networks:
+      - cinema-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      placement:
+        constraints:
+          - node.role == manager
 
   portainer:
     image: portainer/portainer-ce:2.11.1

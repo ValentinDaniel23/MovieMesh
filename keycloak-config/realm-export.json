@@ -15,14 +15,14 @@
             "enabled": true,
             "secret": "gadh2vf!fh5_Asdg34",
             "attributes": {
-                "post.logout.redirect.uris": "http://localhost:8081/*"
+                "post.logout.redirect.uris": "http://localhost:8000/*"
             },
             "redirectUris": [
-                "http://localhost:5001/auth/callback",
-                "http://localhost:5001/auth/callback/*"
+                "http://localhost:8000/auth/callback",
+                "http://localhost:8000/auth/callback/*"
             ],
             "webOrigins": [
-                "http://localhost:8081"
+                "http://localhost:8000"
             ],
             "protocol": "openid-connect",
             "standardFlowEnabled": true,

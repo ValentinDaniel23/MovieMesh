@@ -1,0 +1,34 @@
+_format_version: "2.1"
+
+services:
+  - name: auth-service
+    url: http://auth-service:5000
+    routes:
+      - name: auth-route
+        paths:
+          - /auth
+        strip_path: false
+
+  - name: movies-api
+    url: http://movies-service:5000
+    routes:
+      - name: movies-route
+        paths:
+          - /api
+        strip_path: true
+
+  - name: ticket-api
+    url: http://ticket-service:5003
+    routes:
+      - name: ticket-route
+        paths:
+          - /tickets
+        strip_path: false
+
+  - name: web-ui
+    url: http://web-service:5000
+    routes:
+      - name: web-route
+        paths:
+          - /
+        strip_path: false
