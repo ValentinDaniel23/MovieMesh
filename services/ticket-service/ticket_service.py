@@ -4,7 +4,8 @@ import time
 import threading
 import pika
 import qrcode
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
@@ -98,6 +99,12 @@ threading.Thread(target=rabbit_listener, daemon=True).start()
 @app.route("/tickets/<filename>")
 def get_ticket(filename):
     return send_from_directory(TICKETS_DIR, filename)
+
+
+@app.route("/metrics")
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5003)

@@ -3,7 +3,8 @@ import os
 from urllib.parse import urlencode
 
 import requests
-from flask import Blueprint, Flask, make_response, redirect, request
+from flask import Blueprint, Flask, make_response, redirect, request, Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from utils import *
 
 app = Flask(__name__)
@@ -106,6 +107,11 @@ app.register_blueprint(bp)
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":

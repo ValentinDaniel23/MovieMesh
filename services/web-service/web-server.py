@@ -2,7 +2,8 @@
 import os
 import requests
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from utils import (
     decode_and_verify_access_token, extract_roles, wait_for_keycloak,
@@ -223,6 +224,11 @@ def my_profile():
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":

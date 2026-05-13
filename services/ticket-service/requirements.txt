@@ -3,3 +3,4 @@ pika==1.3.2
 reportlab==4.0.8
 qrcode==7.4.2
 flask
+prometheus-client==0.20.0

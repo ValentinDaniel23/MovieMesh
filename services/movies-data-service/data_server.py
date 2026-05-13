@@ -1,6 +1,7 @@
 import os
 import json
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
@@ -34,6 +35,7 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 3600,
 }
 
+wait_for_dependencies()
 init_db(app)
 
 def response(ok, data=None, error=None, status=200):
@@ -45,6 +47,11 @@ def response(ok, data=None, error=None, status=200):
 @app.route("/health", methods=["GET"])
 def health():
     return response(True, {"status": "healthy"})
+
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 # Movies endpoints
 @app.route("/movies", methods=["GET"])
@@ -335,6 +342,5 @@ def delete_reservation_endpoint(reservation_id):
         return response(False, error=str(e), status=500)
 
 if __name__ == "__main__":
-    wait_for_dependencies()
     seed_initial_data(app)
     app.run(host="0.0.0.0", port=int(PORT), debug=False)
