@@ -158,3 +158,26 @@ To remove the stack and stop all services:
 ```bash
 docker stack rm cinema_stack
 ```
+
+---
+
+## ⚙️ CI/CD Pipeline
+
+The project uses **GitHub Actions** to automatically build, push, and deploy on every push to `main`.
+
+### Pipeline stages
+
+1. **Build & Push** — builds all 6 service images and pushes them to [DockerHub (`idp1`)](https://hub.docker.com/u/idp1)
+2. **Deploy** — SSHs into the Swarm manager and runs `docker stack deploy`
+
+### Required GitHub Secrets
+
+Go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Description |
+|--------|-------------|
+| `DOCKERHUB_USERNAME` | DockerHub username (`idp1`) |
+| `DOCKERHUB_TOKEN` | DockerHub access token |
+| `SSH_HOST` | IP of the Swarm manager node |
+| `SSH_USER` | SSH username on the manager |
+| `SSH_PRIVATE_KEY` | Private SSH key for the manager |

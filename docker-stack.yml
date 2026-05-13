@@ -90,7 +90,7 @@ services:
       replicas: 1
 
   payment-service:
-    image: cinemaapp/payment-service:latest
+    image: idp1/payment-service:latest
     build: ./services/payment-service
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -105,7 +105,7 @@ services:
       replicas: 2
 
   ticket-service:
-    image: cinemaapp/ticket-service:latest
+    image: idp1/ticket-service:latest
     build: ./services/ticket-service
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -142,7 +142,7 @@ services:
         delay: 5s
 
   auth-service:
-    image: cinemaapp/auth-service:latest
+    image: idp1/auth-service:latest
     build: ./services/auth-service
     environment:
       KEYCLOAK_URL_INTERNAL: http://keycloak:8080
@@ -167,7 +167,7 @@ services:
         max_attempts: 5
 
   movies-service:
-    image: cinemaapp/movies-service:latest
+    image: idp1/movies-service:latest
     build: ./services/movies-service
     environment:
       KEYCLOAK_URL_INTERNAL: http://keycloak:8080
@@ -192,7 +192,7 @@ services:
         max_attempts: 5
 
   movies-data-service:
-    image: cinemaapp/movies-data-service:latest
+    image: idp1/movies-data-service:latest
     build: ./services/movies-data-service
     environment:
       KEYCLOAK_URL_INTERNAL: http://keycloak:8080
@@ -215,7 +215,7 @@ services:
         max_attempts: 5
 
   web-service:
-    image: cinemaapp/web-service:latest
+    image: idp1/web-service:latest
     build: ./services/web-service
     environment:
       EXTERNAL_PUBLIC_AUTH_URL: http://localhost:8000
