@@ -24,3 +24,5 @@ env/
 ENV/
 
 *.log
+
+commands.txt
