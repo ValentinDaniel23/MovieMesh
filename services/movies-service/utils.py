@@ -129,8 +129,11 @@ def call_data_service(method: str, endpoint: str, **kwargs) -> dict[str, Any]:
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
         
-        response.raise_for_status()
-        return response.json()
+        try:
+            return response.json()
+        except Exception:
+            response.raise_for_status()
+            return {"ok": False, "error": f"Non-JSON response: {response.text[:200]}"}
     except requests.exceptions.RequestException as e:
         return {
             "ok": False,

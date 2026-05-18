@@ -33,9 +33,9 @@ def seed_initial_data(app):
         db.session.commit()
         
         screenings = [
-            Screening(movie_id=movies[0].id, room_number="A1", date="2026-05-01", time="18:00"),
-            Screening(movie_id=movies[0].id, room_number="A2", date="2026-05-01", time="20:00"),
-            Screening(movie_id=movies[1].id, room_number="B1", date="2026-05-02", time="19:00"),
+            Screening(movie_id=movies[0].id, room_number="A1", date="2026-06-10", time="18:00"),
+            Screening(movie_id=movies[0].id, room_number="A2", date="2026-06-10", time="20:00"),
+            Screening(movie_id=movies[1].id, room_number="B1", date="2026-06-11", time="19:00"),
         ]
         
         for screening in screenings:
